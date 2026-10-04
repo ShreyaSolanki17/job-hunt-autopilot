@@ -58,3 +58,17 @@ class FitExplanation(BaseModel):
 class Email(BaseModel):
     subject: str
     body: str
+
+
+class ScoreIn(BaseModel):
+    job: JobIn
+    required_skills: list[str] = []
+
+
+class ScoreOut(BaseModel):
+    job_id: str
+    score: Score
+    semantic_score: Score
+    keyword_score: Score
+    matched_skills: list[str]
+    gaps: list[str]
