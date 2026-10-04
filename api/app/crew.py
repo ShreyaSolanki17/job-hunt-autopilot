@@ -11,7 +11,7 @@ EMAIL_MIN_SCORE = 50  # below this we skip drafting an email
 # (role, instructions, schema) -> parsed schema instance
 Runner = Callable[[str, str, type[BaseModel]], BaseModel]
 
-DEFAULT_MODELS = {"groq": "groq/llama-3.3-70b-versatile", "gemini": "gemini/gemini-2.0-flash"}
+DEFAULT_MODELS = {"groq": "groq/openai/gpt-oss-120b", "gemini": "gemini/gemini-2.0-flash"}
 
 
 def run_task(role: str, prompt: str, schema: type[BaseModel]) -> BaseModel:
