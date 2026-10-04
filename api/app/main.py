@@ -3,8 +3,8 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 
-from app import scoring
-from app.schemas import ScoreIn, ScoreOut
+from app import crew, scoring
+from app.schemas import AnalysisOut, JobIn, ScoreIn, ScoreOut
 
 app = FastAPI(title="Job Hunt Autopilot")
 
@@ -26,6 +26,10 @@ def get_resume() -> str:
 
 def get_encoder() -> scoring.Encoder:
     return scoring.get_model()
+
+
+def get_runner() -> crew.Runner:
+    return crew.run_task
 
 
 @app.get("/health")
@@ -51,3 +55,13 @@ def score(
         matched_skills=matched,
         gaps=gaps,
     )
+
+
+@app.post("/analyze", response_model=AnalysisOut, dependencies=[Depends(require_secret)])
+def analyze(
+    job: JobIn,
+    resume: str = Depends(get_resume),
+    encoder: scoring.Encoder = Depends(get_encoder),
+    run: crew.Runner = Depends(get_runner),
+) -> AnalysisOut:
+    return crew.analyze(job, resume, encoder, run)
