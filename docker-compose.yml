@@ -1,0 +1,16 @@
+services:
+  n8n:
+    image: n8nio/n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # only what the workflow needs; compose fills these from .env
+      - API_URL=${API_URL:-http://host.docker.internal:8000}
+      - API_SHARED_SECRET=${API_SHARED_SECRET}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - GENERIC_TIMEZONE=Asia/Kolkata
+      - TZ=Asia/Kolkata
+    volumes:
+      - ./n8n_data:/home/node/.n8n
