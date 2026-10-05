@@ -1,3 +1,5 @@
+import html
+import re
 from typing import Annotated, Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -5,6 +7,17 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 MAX_DESCRIPTION_CHARS = 8000  # safe token budget for the LLM and embedder
 
 Score = Annotated[int, Field(ge=0, le=100)]
+
+_BLOCK_TAG = re.compile(r"</?(?:br|p|li|div|h[1-6]|ul|ol|tr)\b[^>]*>", re.I)
+_TAG = re.compile(r"<[^>]+>")
+
+
+def clean_text(raw: str) -> str:
+    """HTML (possibly entity-escaped, as Greenhouse sends it) -> plain text."""
+    text = html.unescape(raw)  # "&lt;p&gt;" -> "<p>"; harmless on plain text
+    text = _TAG.sub("", _BLOCK_TAG.sub("\n", text))
+    text = html.unescape(text).replace("\xa0", " ")
+    return re.sub(r"\n\s*\n+", "\n", re.sub(r"[ \t]+", " ", text)).strip()
 
 
 class JobIn(BaseModel):
@@ -18,8 +31,8 @@ class JobIn(BaseModel):
 
     @field_validator("description")
     @classmethod
-    def truncate_description(cls, v: str) -> str:
-        return v[:MAX_DESCRIPTION_CHARS]
+    def clean_description(cls, v: str) -> str:
+        return clean_text(v)[:MAX_DESCRIPTION_CHARS]
 
 
 class AnalysisOut(BaseModel):

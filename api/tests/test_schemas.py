@@ -52,3 +52,15 @@ def test_skipped_email_requires_empty_draft():
     with pytest.raises(ValidationError):
         AnalysisOut(**{**OUT, "skipped_email": True})
     assert AnalysisOut(**{**OUT, "skipped_email": True, "email_draft": ""}).skipped_email
+
+
+def test_description_html_is_cleaned():
+    from app.schemas import JobIn
+
+    def d(x):
+        return JobIn(job_id="1", title="t", description=x).description
+
+    assert d("<p>Python &amp; <b>RAG</b></p><ul><li>Docker</li></ul>") == "Python & RAG\nDocker"
+    assert d("&lt;div&gt;&lt;h2&gt;Role&lt;/h2&gt;&lt;p&gt;Build&nbsp;LLMs&lt;/p&gt;&lt;/div&gt;") == "Role\nBuild LLMs"  # Greenhouse
+    assert d("&nbsp;...help people <b>AI </b>Data <b>Engineer </b>") == "...help people AI Data Engineer"  # Jooble
+    assert d("plain text, a < b") == "plain text, a < b"

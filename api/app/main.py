@@ -1,9 +1,10 @@
 import os
+from collections.abc import Callable
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 
-from app import crew, scoring
+from app import crew, scoring, sources
 from app.schemas import AnalysisOut, JobIn, ScoreIn, ScoreOut
 
 app = FastAPI(title="Job Hunt Autopilot")
@@ -30,6 +31,10 @@ def get_encoder() -> scoring.Encoder:
 
 def get_runner() -> crew.Runner:
     return crew.run_task
+
+
+def get_fetcher() -> Callable[[], list[JobIn]]:
+    return sources.fetch_all
 
 
 @app.get("/health")
@@ -65,3 +70,8 @@ def analyze(
     run: crew.Runner = Depends(get_runner),
 ) -> AnalysisOut:
     return crew.analyze(job, resume, encoder, run)
+
+
+@app.get("/jobs", response_model=list[JobIn], dependencies=[Depends(require_secret)])
+def jobs(fetch: Callable[[], list[JobIn]] = Depends(get_fetcher)) -> list[JobIn]:
+    return fetch()
