@@ -8,6 +8,10 @@ REMOTIVE = {"jobs": [
      "description": "<p>Python &amp; RAG</p>", "url": "https://remotive.com/x"},
     {"id": 2, "title": "AI Engineer", "company_name": "B", "candidate_required_location": "USA Only",
      "description": "x", "url": "u"},
+    {"id": 4, "title": "Senior AI Engineer", "company_name": "D", "candidate_required_location": "Worldwide",
+     "description": "x", "url": "u"},
+    {"id": 5, "title": "AI Engineering Manager", "company_name": "E", "candidate_required_location": "Worldwide",
+     "description": "x", "url": "u"},
     {"id": 3, "title": "Copywriter", "company_name": "C", "candidate_required_location": "Worldwide",
      "description": "x", "url": "u"},
 ]}
@@ -45,6 +49,15 @@ def test_fetchers_filter_and_map(monkeypatch):
     assert [(j.job_id, j.description) for j in gh] == [("greenhouse-acme-7", "Build models"), ("greenhouse-acme-12", ""), ("greenhouse-acme-10", "")]
     lv = sources.fetch_lever(fake_get, "co")[0]
     assert lv.job_id == "lever-co-abc" and "PyTorch" in lv.description and "Perks" in lv.description
+
+
+def test_level_and_function_blocklist():
+    for title in ["Senior ML Engineer", "Staff Software Engineer - Machine Learning", "Sr. AI Engineer",
+                  "Director of Applied Science", "Pre Sales - AI Solution Architect", "Finance Data and AI Lead",
+                  "Principal Data Scientist", "AI Engineering Manager"]:
+        assert not sources._wanted(title, "Bengaluru, India"), title
+    for title in ["AI Engineer", "Machine Learning Engineer", "Data Scientist III", "Associate ML Engineer"]:
+        assert sources._wanted(title, "Bengaluru, India"), title
 
 
 def test_fetch_all_survives_failure_and_caps(monkeypatch):

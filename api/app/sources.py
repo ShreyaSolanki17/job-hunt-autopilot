@@ -21,7 +21,11 @@ NEAR_ME = re.compile(
     re.I,
 )
 BARE_REMOTE = re.compile(r"\W*remote\W*", re.I)  # "Remote - US" is region-locked; only plain "Remote" passes
-MAX_JOBS = 30  # caps LLM calls per run
+# Wrong level/function for a fresher AI/ML engineer search; also saves LLM quota.
+EXCLUDE = re.compile(
+    r"\b(manager|director|head|vp|sales|finance|gtm|pre-?sales|senior|sr|staff|principal|lead)\b", re.I
+)
+MAX_JOBS = 15  # caps LLM calls per run
 
 GetJson = Callable[[str], Any]
 
@@ -33,7 +37,7 @@ def http_get(url: str) -> Any:
 
 
 def _wanted(title: str, location: str) -> bool:
-    return bool(TITLE.search(title) and (NEAR_ME.search(location) or BARE_REMOTE.fullmatch(location)))
+    return bool(TITLE.search(title) and not EXCLUDE.search(title) and (NEAR_ME.search(location) or BARE_REMOTE.fullmatch(location)))
 
 
 def fetch_remotive(get: GetJson) -> list[JobIn]:
