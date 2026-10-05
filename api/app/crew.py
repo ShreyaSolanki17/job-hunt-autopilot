@@ -14,12 +14,27 @@ Runner = Callable[[str, str, type[BaseModel]], BaseModel]
 DEFAULT_MODELS = {"groq": "groq/openai/gpt-oss-120b", "gemini": "gemini/gemini-2.0-flash"}
 
 
-def run_task(role: str, prompt: str, schema: type[BaseModel]) -> BaseModel:
-    """Run one single-agent crew and return its structured output."""
-    from crewai import LLM, Agent, Crew, Task
+def _llm():
+    from crewai import LLM
 
     provider = os.getenv("LLM_PROVIDER", "groq")
-    llm = LLM(model=os.getenv("LLM_MODEL") or DEFAULT_MODELS[provider])
+    return LLM(model=os.getenv("LLM_MODEL") or DEFAULT_MODELS[provider])
+
+
+def warm_up() -> None:
+    """Load crewai + litellm (slow, lazily imported) once at startup.
+
+    Doing it on the first request lets two concurrent requests race each other
+    inside the import and fail with KeyError: 'litellm'.
+    """
+    _llm()
+
+
+def run_task(role: str, prompt: str, schema: type[BaseModel]) -> BaseModel:
+    """Run one single-agent crew and return its structured output."""
+    from crewai import Agent, Crew, Task
+
+    llm = _llm()
     agent = Agent(role=role, goal=role, backstory=role, llm=llm, allow_delegation=False)
     task = Task(description=prompt, expected_output="Structured result", agent=agent, output_pydantic=schema)
     return Crew(agents=[agent], tasks=[task]).kickoff().pydantic

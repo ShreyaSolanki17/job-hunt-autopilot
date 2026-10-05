@@ -1,5 +1,6 @@
 import os
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -7,7 +8,14 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from app import crew, scoring, sources
 from app.schemas import AnalysisOut, JobIn, ScoreIn, ScoreOut
 
-app = FastAPI(title="Job Hunt Autopilot")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    crew.warm_up()  # heavy imports happen once, before concurrent requests can race
+    scoring.get_model()  # likewise the embedding model (cached after this)
+    yield
+
+
+app = FastAPI(title="Job Hunt Autopilot", lifespan=lifespan)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
