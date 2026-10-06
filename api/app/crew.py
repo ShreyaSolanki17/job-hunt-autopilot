@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 T = TypeVar("T")
 
 EMAIL_MIN_SCORE = 50  # below this we skip drafting an email
+MAX_YEARS_EXPERIENCE = 1  # jobs asking for more years than this are filtered out
 
 # (role, instructions, schema) -> parsed schema instance
 Runner = Callable[[str, str, type[BaseModel]], BaseModel]
@@ -65,7 +66,9 @@ def analyze(job: JobIn, resume: str, encoder: scoring.Encoder, run: Runner = run
         "Job requirements analyst",
         "Extract requirements from this job. required_skills and nice_to_haves must be short skill, tool or "
         'technology names only (1-3 words each, e.g. "Python", "Docker", "RAG", "PyTorch"). Never write '
-        "sentences, years of experience, degrees or certifications; leave those out.\n"
+        "sentences, years of experience, degrees or certifications; leave those out of the skill lists. "
+        "Separately, set min_years_experience to the minimum years of professional experience the job "
+        'explicitly requires (take the lowest number of a range, e.g. "3-5 years" -> 3), or null if none is stated.\n'
         f"Job:\n{job_text}",
         Requirements,
     )
@@ -73,6 +76,24 @@ def analyze(job: JobIn, resume: str, encoder: scoring.Encoder, run: Runner = run
     sem = scoring.semantic_score(resume, job_text, encoder)
     kw = scoring.keyword_score(resume, reqs.required_skills)
     score = scoring.final_score(sem, kw)
+
+    years = reqs.min_years_experience
+    if years is not None and years > MAX_YEARS_EXPERIENCE:
+        # skip the fit and email LLM calls for jobs we would filter out anyway
+        return AnalysisOut(
+            job_id=job.job_id,
+            score=score,
+            semantic_score=sem,
+            keyword_score=kw,
+            matched_skills=matched,
+            gaps=gaps,
+            summary=f"Requires {years}+ years of experience.",
+            email_subject="",
+            email_draft="",
+            skipped_email=True,
+            min_years_experience=years,
+            too_senior=True,
+        )
 
     fit = run(
         "Career coach",
@@ -101,4 +122,5 @@ def analyze(job: JobIn, resume: str, encoder: scoring.Encoder, run: Runner = run
         email_subject=email.subject if email else "",
         email_draft=email.body if email else "",
         skipped_email=email is None,
+        min_years_experience=years,
     )

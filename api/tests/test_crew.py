@@ -14,13 +14,18 @@ class SameVector:
         return np.ones((len(sentences), 3))
 
 
-def fake_runner(skills: list[str]):
+def fake_runner(skills: list[str], years: int | None = None, calls: list | None = None):
     out = {
-        Requirements: Requirements(required_skills=skills),
+        Requirements: Requirements(required_skills=skills, min_years_experience=years),
         FitExplanation: FitExplanation(matched_skills=["llm says"], gaps=[], summary="Good fit"),
         Email: Email(subject="Hi", body="Hello"),
     }
-    return lambda role, prompt, schema: out[schema]
+    def run(role, prompt, schema):
+        if calls is not None:
+            calls.append(schema)
+        return out[schema]
+
+    return run
 
 
 def test_high_score_drafts_email():
@@ -61,3 +66,13 @@ def test_retry_recovers_then_gives_up():
     assert _retry(flaky) == "ok" and len(calls) == 3
     with pytest.raises(ValueError):
         _retry(lambda: (_ for _ in ()).throw(ValueError("always")), attempts=2)
+
+
+def test_experience_filter():
+    calls = []
+    r = analyze(JOB, RESUME, SameVector(), fake_runner(["Python"], years=5, calls=calls))
+    assert r.too_senior and r.min_years_experience == 5 and r.skipped_email
+    assert calls == [Requirements]  # no fit/email LLM calls for filtered jobs
+    for years in (None, 0, 1):  # up to 1 year is fine
+        r = analyze(JOB, RESUME, SameVector(), fake_runner(["Python"], years=years))
+        assert not r.too_senior and r.min_years_experience == years

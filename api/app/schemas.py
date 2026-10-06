@@ -46,6 +46,8 @@ class AnalysisOut(BaseModel):
     email_subject: str
     email_draft: str
     skipped_email: bool
+    min_years_experience: int | None = None
+    too_senior: bool = False
 
     @model_validator(mode="after")
     def skipped_means_no_draft(self) -> Self:
@@ -59,6 +61,7 @@ class Requirements(BaseModel):
     required_skills: list[str]
     nice_to_haves: list[str] = []
     seniority: str = ""
+    min_years_experience: int | None = None
     red_flags: list[str] = []
 
 
