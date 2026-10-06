@@ -43,3 +43,21 @@ def test_analyze_endpoint():
         assert r.status_code == 200 and r.json()["score"] == 100
     finally:
         app.dependency_overrides.clear()
+
+
+def test_retry_recovers_then_gives_up():
+    import pytest
+
+    from app.crew import _retry
+
+    calls = []
+
+    def flaky():
+        calls.append(1)
+        if len(calls) < 3:
+            raise ValueError("tool_use_failed")
+        return "ok"
+
+    assert _retry(flaky) == "ok" and len(calls) == 3
+    with pytest.raises(ValueError):
+        _retry(lambda: (_ for _ in ()).throw(ValueError("always")), attempts=2)
