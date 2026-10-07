@@ -42,6 +42,8 @@ score = round(0.6 * semantic + 0.4 * keyword)
 - **keyword** (0-100): the share of the job's required skills that appear in the resume. Matching is case-insensitive, respects word boundaries (`Java` does not match `JavaScript`, `C++` works), and understands aliases (`JS` / `JavaScript`, `GenAI` / `Generative AI`, `Hugging Face` / `HuggingFace`, `GCP` / `Google Cloud`, and more).
 - The matched skills and gaps shown in Discord come from this Python matcher, not from the LLM.
 
+For the design in depth (components, failure modes, trade-offs), see [docs/architecture.md](docs/architecture.md).
+
 ## Tech stack
 
 | Layer | Tools |
