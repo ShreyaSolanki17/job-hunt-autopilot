@@ -18,6 +18,12 @@ ALIAS_GROUPS: list[set[str]] = [
     {"postgres", "postgresql"},
     {"sklearn", "scikit-learn", "scikit learn"},
     {"torch", "pytorch"},
+    {"huggingface", "hugging face"},
+    {"genai", "gen ai", "generative ai"},
+    {"gcp", "google cloud", "google cloud platform"},
+    {"aws", "amazon web services"},
+    {"rag", "retrieval augmented generation", "retrieval-augmented generation"},
+    {"cv", "computer vision"},
 ]
 _ALIASES = {term: group for group in ALIAS_GROUPS for term in group}
 

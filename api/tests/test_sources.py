@@ -60,13 +60,12 @@ def test_level_and_function_blocklist():
         assert sources._wanted(title, "Bengaluru, India"), title
 
 
-def test_fetch_all_survives_failure_and_caps(monkeypatch):
+def test_fetch_all_survives_failure_and_interleaves(monkeypatch):
     monkeypatch.setattr(sources, "GREENHOUSE_BOARDS", ["reddit", "acme"])
     monkeypatch.setattr(sources, "LEVER_COMPANIES", ["co"])
     ids = [j.job_id for j in sources.fetch_all(fake_get)]
     assert ids == ["remotive-1", "greenhouse-acme-7", "lever-co-abc", "greenhouse-acme-12", "greenhouse-acme-10"]  # interleaved
-    monkeypatch.setattr(sources, "MAX_JOBS", 3)
-    assert {j.source for j in sources.fetch_all(fake_get)} == {"remotive", "greenhouse", "lever"}  # cap spreads
+    assert not hasattr(sources, "MAX_JOBS")  # the per-run cap lives in n8n, after the seen filter
 
 
 def test_jobs_endpoint():
@@ -76,3 +75,9 @@ def test_jobs_endpoint():
         assert r.status_code == 200 and r.json()[0]["job_id"] == "remotive-1"
     finally:
         app.dependency_overrides.clear()
+
+
+def test_data_roles_are_allowed():
+    assert sources._wanted("Data Analyst", "Bengaluru, India")
+    assert sources._wanted("Data Engineer", "Remote")
+    assert not sources._wanted("Data Analyst", "Remote - US")

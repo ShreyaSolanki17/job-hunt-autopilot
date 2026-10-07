@@ -11,10 +11,13 @@ from app.schemas import JobIn
 log = logging.getLogger(__name__)
 
 # Public board names: boards-api.greenhouse.io/v1/boards/<token>, api.lever.co/v0/postings/<slug>
-GREENHOUSE_BOARDS = ["reddit", "instacart", "samsara", "databricks", "anthropic"]
-LEVER_COMPANIES = ["meesho", "outreach", "paytm", "zeta"]
+GREENHOUSE_BOARDS = [
+    "glance", "gleanwork", "mongodb", "coinbase", "commvault", "inmobi", "observeai", "sigmoid", "togetherai", "roblox",
+    "databricks", "anthropic",
+]
+LEVER_COMPANIES = ["meesho", "paytm", "fampay", "mindtickle"]
 
-TITLE = re.compile(r"\b(ai|ml|machine learning|data scientist|llm|nlp|deep learning|applied scientist|research engineer)\b", re.I)
+TITLE = re.compile(r"\b(ai|ml|machine learning|data scientist|llm|nlp|deep learning|applied scientist|research engineer|data analyst|data engineer)\b", re.I)
 NEAR_ME = re.compile(
     r"india|bangalore|bengaluru|hyderabad|mumbai|pune|delhi|gurgaon|gurugram|noida|chennai|ahmedabad"
     r"|worldwide|anywhere|apac|asia",
@@ -25,7 +28,6 @@ BARE_REMOTE = re.compile(r"\W*remote\W*", re.I)  # "Remote - US" is region-locke
 EXCLUDE = re.compile(
     r"\b(manager|director|head|vp|sales|finance|gtm|pre-?sales|senior|sr|staff|principal|lead)\b", re.I
 )
-MAX_JOBS = 15  # caps LLM calls per run
 
 GetJson = Callable[[str], Any]
 
@@ -111,6 +113,6 @@ def fetch_all(get: GetJson = http_get) -> list[JobIn]:
             per_source.append(call())
         except Exception:
             log.warning("source failed", exc_info=True)
-    # round-robin so the cap spreads across companies instead of keeping only the first one
+    # round-robin so n8n's per-run cap spreads across companies instead of keeping only the first one
     mixed = [j for group in itertools.zip_longest(*per_source) for j in group if j]
-    return mixed[:MAX_JOBS]  # ponytail: no ranking or cross-run dedupe yet
+    return mixed  # capping happens in n8n after the seen-jobs filter, or later jobs would starve

@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from collections.abc import Callable
@@ -47,6 +48,19 @@ def _retry(fn: Callable[[], T], attempts: int = 3) -> T:
             log.warning("LLM call failed (attempt %d/%d), retrying", i + 1, attempts, exc_info=True)
 
 
+def _recover(exc: Exception, schema: type[BaseModel]) -> BaseModel | None:
+    """Groq's tool_use_failed error carries the model's (valid) JSON answer in failed_generation; reuse it."""
+    msg = str(exc)
+    start = msg.find("GroqException - ")
+    if start < 0:
+        return None
+    try:
+        body, _ = json.JSONDecoder().raw_decode(msg, msg.index("{", start))
+        return schema.model_validate_json(body["error"]["failed_generation"])
+    except (ValueError, KeyError, TypeError):  # not that error, or the JSON doesn't fit the schema
+        return None
+
+
 def run_task(role: str, prompt: str, schema: type[BaseModel]) -> BaseModel:
     """Run one single-agent crew and return its structured output."""
     from crewai import Agent, Crew, Task
@@ -54,7 +68,13 @@ def run_task(role: str, prompt: str, schema: type[BaseModel]) -> BaseModel:
     def once() -> BaseModel:
         agent = Agent(role=role, goal=role, backstory=role, llm=_llm(), allow_delegation=False)
         task = Task(description=prompt, expected_output="Structured result", agent=agent, output_pydantic=schema)
-        return Crew(agents=[agent], tasks=[task]).kickoff().pydantic
+        try:
+            return Crew(agents=[agent], tasks=[task]).kickoff().pydantic
+        except Exception as e:
+            recovered = _recover(e, schema)
+            if recovered is None:
+                raise
+            return recovered
 
     return _retry(once)
 

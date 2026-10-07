@@ -61,3 +61,9 @@ def test_final_score_weights():
     assert final_score(82, 94) == 87
     assert final_score(0, 0) == 0
     assert final_score(100, 100) == 100
+
+
+def test_keyword_new_aliases():
+    resume = "Hugging Face Transformers, Generative AI, Google Cloud, Retrieval-Augmented Generation, Computer Vision"
+    assert keyword_score(resume, ["HuggingFace", "GenAI", "GCP", "RAG", "CV"]) == 100
+    assert keyword_score("I know cvs and awsome tools", ["CV", "AWS"]) == 0  # no false hits inside other words

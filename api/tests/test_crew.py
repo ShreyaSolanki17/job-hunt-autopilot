@@ -76,3 +76,20 @@ def test_experience_filter():
     for years in (None, 0, 1):  # up to 1 year is fine
         r = analyze(JOB, RESUME, SameVector(), fake_runner(["Python"], years=years))
         assert not r.too_senior and r.min_years_experience == years
+
+
+def test_recover_from_groq_tool_use_failed():
+    import json
+
+    from app.crew import _recover
+
+    answer = {"required_skills": ["Python", "Docker"], "min_years_experience": 10}
+    err = "litellm.BadRequestError: GroqException - " + json.dumps(
+        {"error": {"message": "Tool choice is required", "code": "tool_use_failed", "failed_generation": json.dumps(answer)}}
+    )
+    got = _recover(RuntimeError(err), Requirements)
+    assert got.required_skills == ["Python", "Docker"] and got.min_years_experience == 10
+    assert _recover(RuntimeError("GroqException - " + json.dumps({"error": {"message": "Rate limit reached"}})), Requirements) is None
+    assert _recover(RuntimeError("something else"), Requirements) is None
+    bad = "GroqException - " + json.dumps({"error": {"failed_generation": json.dumps({"nope": 1})}})
+    assert _recover(RuntimeError(bad), Requirements) is None  # JSON doesn't fit the schema
